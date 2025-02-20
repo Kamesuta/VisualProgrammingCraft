@@ -1,0 +1,4 @@
+name: VisualProgrammingCraft
+version: '1.0-SNAPSHOT'
+main: com.kamesuta.programcraft.VisualProgrammingCraft
+api-version: '1.20'
