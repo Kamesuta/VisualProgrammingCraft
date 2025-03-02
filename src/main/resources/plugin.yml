@@ -2,3 +2,14 @@ name: VisualProgrammingCraft
 version: '1.0-SNAPSHOT'
 main: com.kamesuta.programcraft.VisualProgrammingCraft
 api-version: '1.20'
+
+commands:
+  pico:
+    description: Create a new Pico and open the editor.
+    usage: /<command> create [name]
+    permission: visualprogrammingcraft.command
+
+permissions:
+  visualprogrammingcraft.command:
+    description: Allow to use /pico command.
+    default: true

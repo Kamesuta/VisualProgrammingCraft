@@ -72,11 +72,10 @@
       <version>1.20.4-R0.1-SNAPSHOT</version>
       <scope>provided</scope>
     </dependency>
-    <!-- https://mvnrepository.com/artifact/org.luaj/luaj-jse -->
     <dependency>
-      <groupId>org.luaj</groupId>
-      <artifactId>luaj-jse</artifactId>
-      <version>3.0.1</version>
+      <groupId>com.github.Kamesuta</groupId>
+      <artifactId>luaj</artifactId>
+      <version>3.0.2.2</version>
     </dependency>
   </dependencies>
 </project>
