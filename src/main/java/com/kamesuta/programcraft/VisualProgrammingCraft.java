@@ -1,6 +1,7 @@
 package com.kamesuta.programcraft;
 
 import com.kamesuta.programcraft.lua.LuaMachine;
+import com.kamesuta.programcraft.lua.LuaTimer;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandSender;
 import org.bukkit.plugin.java.JavaPlugin;
@@ -12,17 +13,21 @@ import org.luaj.vm2.lib.OneArgFunction;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.Reader;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.logging.Logger;
 import java.util.stream.Collectors;
 
 public final class VisualProgrammingCraft extends JavaPlugin {
     public static VisualProgrammingCraft instance;
     public static Logger logger;
-    public static String biosText;
-    private static Map<String, LuaMachine> luaMachines = new HashMap<>();
+
+    public String biosText;
+    private final Map<String, LuaMachine> luaMachines = new HashMap<>();
+    private final CopyOnWriteArrayList<LuaTimer> timers = new CopyOnWriteArrayList<>();
 
     @Override
     public void onEnable() {
@@ -38,6 +43,13 @@ public final class VisualProgrammingCraft extends JavaPlugin {
             getServer().getPluginManager().disablePlugin(this);
             return;
         }
+
+        // Tick the timers
+        getServer().getScheduler().scheduleSyncRepeatingTask(this, () -> {
+            for (LuaTimer timer : timers) {
+                timer.update();
+            }
+        }, 0, 1);
     }
 
     @Override
@@ -72,19 +84,28 @@ public final class VisualProgrammingCraft extends JavaPlugin {
         String name = args[1];
 
         if (subCommand.equalsIgnoreCase("create")) {
+            // マシン追加
             if (luaMachines.containsKey(name)) {
                 sender.sendMessage("Machine already exists: " + name);
                 return true;
             }
             LuaMachine machine = new LuaMachine();
-            machine.addAPI("println", new OneArgFunction() {
+            luaMachines.put(name, machine);
+
+            // プリント系
+            machine.addAPI("print", new OneArgFunction() {
                 @Override
                 public LuaValue call(LuaValue luaValue) {
                     sender.sendMessage(luaValue.tojstring());
                     return LuaValue.NIL;
                 }
             });
-            luaMachines.put(name, machine);
+
+            // スケジュール系
+            LuaTimer timer = new LuaTimer();
+            timer.register(machine);
+            timers.add(timer);
+
             sender.sendMessage("Machine created: " + name);
             return true;
         } else if (subCommand.equalsIgnoreCase("destroy")) {
@@ -112,7 +133,7 @@ public final class VisualProgrammingCraft extends JavaPlugin {
                 return true;
             }
 
-            String code = args[2];
+            String code = String.join(" ", Arrays.copyOfRange(args, 2, args.length));
             machine.loadBios(biosText + "\n" + code);
             machine.handleEvent(null, null);
             return true;

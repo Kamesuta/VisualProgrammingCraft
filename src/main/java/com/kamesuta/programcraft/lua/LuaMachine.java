@@ -2,12 +2,14 @@ package com.kamesuta.programcraft.lua;
 
 import com.kamesuta.programcraft.VisualProgrammingCraft;
 import org.bukkit.Bukkit;
-import org.luaj.vm2.*;
+import org.luaj.vm2.LuaError;
+import org.luaj.vm2.LuaThread;
+import org.luaj.vm2.LuaValue;
+import org.luaj.vm2.Varargs;
 import org.luaj.vm2.lib.OneArgFunction;
 import org.luaj.vm2.lib.ZeroArgFunction;
 import org.luaj.vm2.lib.jse.JsePlatform;
 
-import java.util.Arrays;
 import java.util.logging.Level;
 import java.util.stream.Stream;
 
@@ -120,7 +122,7 @@ public class LuaMachine {
         }
     }
 
-    public void handleEvent(String eventName, LuaValue[] arguments) {
+    public void handleEvent(String eventName, Varargs arguments) {
         if (m_mainRoutine == null) {
             return;
         }
@@ -130,15 +132,16 @@ public class LuaMachine {
         }
 
         try {
-            LuaValue[] resumeArgs = Stream.of(
+            LuaValue[] resumeArgs = Stream.concat(
                             Stream.of(m_mainRoutine),
-                            eventName == null ? Stream.<LuaValue>empty() : Stream.of(LuaValue.valueOf(eventName)),
-                            Arrays.stream(arguments == null ? new LuaValue[0] : arguments)
+                            eventName == null ? Stream.empty() : Stream.of(LuaValue.valueOf(eventName))
                     )
-                    .flatMap(s -> s)
                     .toArray(LuaValue[]::new);
 
-            Varargs results = m_coroutine_resume.invoke(LuaValue.varargsOf(resumeArgs));
+            Varargs results = m_coroutine_resume.invoke(
+                    arguments == null
+                            ? LuaValue.varargsOf(resumeArgs)
+                            : LuaValue.varargsOf(resumeArgs, arguments));
             if (m_hardAbortMessage != null) {
                 throw new LuaError(m_hardAbortMessage);
             } else if (!results.arg1().checkboolean()) {
