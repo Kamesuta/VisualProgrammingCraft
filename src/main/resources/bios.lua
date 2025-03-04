@@ -12,3 +12,9 @@ function sleep( nTime )
         local sEvent, param = pullEvent( "timer" )
     until param == timer
 end
+
+-- pico = {}
+function pico.forward( length )
+    pico.native.forward( length or 1 )
+    pullEvent( "pico_move" )
+end

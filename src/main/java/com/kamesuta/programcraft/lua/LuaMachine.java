@@ -26,6 +26,9 @@ public class LuaMachine {
     private String m_softAbortMessage;
     private String m_hardAbortMessage;
 
+    private LuaTimer m_timer;
+    private Pico m_pico;
+
     public LuaMachine() {
         // Create an environment to run in
         m_globals = JsePlatform.debugGlobals();
@@ -95,10 +98,25 @@ public class LuaMachine {
 
         m_softAbortMessage = null;
         m_hardAbortMessage = null;
+
+        // タイマー
+        m_timer = new LuaTimer();
+        m_timer.register(this);
+        // Pico
+        m_pico = new Pico();
+        m_pico.register(this);
     }
 
     public void addAPI(String name, LuaValue api) {
         m_globals.set(name, api);
+    }
+
+    public LuaTimer getTimer() {
+        return m_timer;
+    }
+
+    public Pico getPico() {
+        return m_pico;
     }
 
     public void loadBios(String biosText) {

@@ -2,8 +2,11 @@ package com.kamesuta.programcraft;
 
 import com.kamesuta.programcraft.lua.LuaMachine;
 import com.kamesuta.programcraft.lua.LuaTimer;
+import org.bukkit.Location;
+import org.bukkit.block.CommandBlock;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandSender;
+import org.bukkit.entity.Player;
 import org.bukkit.plugin.java.JavaPlugin;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -27,7 +30,6 @@ public final class VisualProgrammingCraft extends JavaPlugin {
 
     public String biosText;
     private final Map<String, LuaMachine> luaMachines = new HashMap<>();
-    private final CopyOnWriteArrayList<LuaTimer> timers = new CopyOnWriteArrayList<>();
 
     @Override
     public void onEnable() {
@@ -46,8 +48,9 @@ public final class VisualProgrammingCraft extends JavaPlugin {
 
         // Tick the timers
         getServer().getScheduler().scheduleSyncRepeatingTask(this, () -> {
-            for (LuaTimer timer : timers) {
-                timer.update();
+            for (LuaMachine machine : luaMachines.values()) {
+                machine.getTimer().update();
+                machine.getPico().update();
             }
         }, 0, 1);
     }
@@ -84,6 +87,18 @@ public final class VisualProgrammingCraft extends JavaPlugin {
         String name = args[1];
 
         if (subCommand.equalsIgnoreCase("create")) {
+            // プレイヤー/コマンドブロック座標取得
+            Location location = null;
+            if (sender instanceof Player) {
+                location = ((Player) sender).getLocation();
+            } else if (sender instanceof CommandBlock) {
+                location = ((CommandBlock) sender).getLocation();
+            }
+            if (location == null) {
+                sender.sendMessage("Cannot determine location");
+                return true;
+            }
+
             // マシン追加
             if (luaMachines.containsKey(name)) {
                 sender.sendMessage("Machine already exists: " + name);
@@ -101,10 +116,8 @@ public final class VisualProgrammingCraft extends JavaPlugin {
                 }
             });
 
-            // スケジュール系
-            LuaTimer timer = new LuaTimer();
-            timer.register(machine);
-            timers.add(timer);
+            // Pico
+            machine.getPico().spawn(location.getWorld(), location, name);
 
             sender.sendMessage("Machine created: " + name);
             return true;
@@ -114,6 +127,10 @@ public final class VisualProgrammingCraft extends JavaPlugin {
                 sender.sendMessage("Machine does not exist: " + name);
                 return true;
             }
+
+            // Pico
+            machine.getPico().despawn();
+
             machine.unload();
             luaMachines.remove(name);
             sender.sendMessage("Machine destroyed: " + name);
