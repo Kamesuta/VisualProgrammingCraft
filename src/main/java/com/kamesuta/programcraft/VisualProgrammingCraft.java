@@ -1,7 +1,6 @@
 package com.kamesuta.programcraft;
 
 import com.kamesuta.programcraft.lua.LuaMachine;
-import com.kamesuta.programcraft.lua.LuaTimer;
 import org.bukkit.Location;
 import org.bukkit.block.CommandBlock;
 import org.bukkit.command.Command;
@@ -10,6 +9,7 @@ import org.bukkit.entity.Player;
 import org.bukkit.plugin.java.JavaPlugin;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
+import org.luaj.vm2.LuaError;
 import org.luaj.vm2.LuaValue;
 import org.luaj.vm2.lib.OneArgFunction;
 
@@ -20,7 +20,6 @@ import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.logging.Logger;
 import java.util.stream.Collectors;
 
@@ -41,7 +40,7 @@ public final class VisualProgrammingCraft extends JavaPlugin {
         try {
             biosText = loadTextResource("bios.lua");
         } catch (IOException e) {
-            logger.severe("Could not load bios.lua: " + e.getMessage());
+            logger.severe("bios.luaの読み込みに失敗: " + e.getMessage());
             getServer().getPluginManager().disablePlugin(this);
             return;
         }
@@ -67,13 +66,13 @@ public final class VisualProgrammingCraft extends JavaPlugin {
         }
 
         if (args.length < 1) {
-            sender.sendMessage("Usage: /pico <create|destroy|list|run>");
+            sender.sendMessage("使用法: /pico <create|destroy|list|run>");
             return true;
         }
         String subCommand = args[0];
 
         if (subCommand.equalsIgnoreCase("list")) {
-            sender.sendMessage("Machines:");
+            sender.sendMessage("Pico:");
             for (String machineName : luaMachines.keySet()) {
                 sender.sendMessage("  " + machineName);
             }
@@ -81,7 +80,7 @@ public final class VisualProgrammingCraft extends JavaPlugin {
         }
 
         if (args.length < 2) {
-            sender.sendMessage("Usage: /pico <name> <create|destroy|list|run>");
+            sender.sendMessage("使用法: /pico <name> <create|destroy|list|run>");
             return true;
         }
         String name = args[1];
@@ -95,13 +94,13 @@ public final class VisualProgrammingCraft extends JavaPlugin {
                 location = ((CommandBlock) sender).getLocation();
             }
             if (location == null) {
-                sender.sendMessage("Cannot determine location");
+                sender.sendMessage("位置を特定できません");
                 return true;
             }
 
             // マシン追加
             if (luaMachines.containsKey(name)) {
-                sender.sendMessage("Machine already exists: " + name);
+                sender.sendMessage("Picoは既に存在します: " + name);
                 return true;
             }
             LuaMachine machine = new LuaMachine();
@@ -119,12 +118,12 @@ public final class VisualProgrammingCraft extends JavaPlugin {
             // Pico
             machine.getPico().spawn(location.getWorld(), location, name);
 
-            sender.sendMessage("Machine created: " + name);
+            sender.sendMessage("Picoを作成しました: " + name);
             return true;
         } else if (subCommand.equalsIgnoreCase("destroy")) {
             LuaMachine machine = luaMachines.get(name);
             if (machine == null) {
-                sender.sendMessage("Machine does not exist: " + name);
+                sender.sendMessage("Picoは存在しません: " + name);
                 return true;
             }
 
@@ -133,29 +132,34 @@ public final class VisualProgrammingCraft extends JavaPlugin {
 
             machine.unload();
             luaMachines.remove(name);
-            sender.sendMessage("Machine destroyed: " + name);
+            sender.sendMessage("Picoは破棄されました: " + name);
             return true;
         } else if (subCommand.equalsIgnoreCase("run")) {
             if (args.length < 3) {
-                sender.sendMessage("Usage: /pico run <name> <code>");
+                sender.sendMessage("使用法: /pico run <name> <code>");
                 return true;
             }
             LuaMachine machine = luaMachines.get(name);
             if (machine == null) {
-                sender.sendMessage("Machine does not exist: " + name);
+                sender.sendMessage("Picoは存在しません: " + name);
                 return true;
             }
             if (!machine.isFinished()) {
-                sender.sendMessage("Machine is already running: " + name);
+                sender.sendMessage("Picoは既に実行中です: " + name);
                 return true;
             }
 
             String code = String.join(" ", Arrays.copyOfRange(args, 2, args.length));
-            machine.loadBios(biosText + "\n" + code);
+            try {
+                machine.loadBios(biosText + "\n" + code);
+            } catch (LuaError e) {
+                sender.sendMessage("コードの読み込みに失敗: " + e.getMessage());
+                return true;
+            }
             machine.handleEvent(null, null);
             return true;
         } else {
-            sender.sendMessage("Usage: /pico <create|destroy|list|run> <name>");
+            sender.sendMessage("使用法: /pico <create|destroy|list|run> <name>");
             return true;
         }
     }
@@ -181,13 +185,13 @@ public final class VisualProgrammingCraft extends JavaPlugin {
         // Load the bios
         try (Reader reader = getTextResource(filename)) {
             if (reader == null) {
-                throw new IOException("Could not find file: " + filename);
+                throw new IOException("ファイルの読み込みに失敗: " + filename);
             }
             return new BufferedReader(reader)
                     .lines()
                     .collect(Collectors.joining("\n"));
         } catch (IOException e) {
-            throw new IOException("Could not read file: " + filename);
+            throw new IOException("ファイルの読み込みに失敗: " + filename, e);
         }
     }
 }

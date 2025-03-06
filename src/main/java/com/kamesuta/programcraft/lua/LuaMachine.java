@@ -131,8 +131,7 @@ public class LuaMachine {
                     LuaValue.valueOf(biosText), LuaValue.valueOf("bios.lua")
             ));
             m_mainRoutine = m_coroutine_create.call(program);
-        } catch (LuaError e) {
-            VisualProgrammingCraft.logger.log(Level.WARNING, "Could not load bios.lua ", e);
+        } finally {
             if (m_mainRoutine != null) {
                 ((LuaThread) m_mainRoutine).abandon();
                 m_mainRoutine = null;

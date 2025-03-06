@@ -1,0 +1,9 @@
+{
+    "Lua.diagnostics.globals": [
+        "pico",
+        "startTimer"
+    ],
+    "Lua.diagnostics.disable": [
+        "lowercase-global"
+    ]
+}
