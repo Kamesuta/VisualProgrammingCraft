@@ -10,8 +10,6 @@ import org.bukkit.plugin.java.JavaPlugin;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.luaj.vm2.LuaError;
-import org.luaj.vm2.LuaValue;
-import org.luaj.vm2.lib.OneArgFunction;
 
 import java.io.BufferedReader;
 import java.io.IOException;
@@ -106,14 +104,8 @@ public final class VisualProgrammingCraft extends JavaPlugin {
             LuaMachine machine = new LuaMachine();
             luaMachines.put(name, machine);
 
-            // プリント系
-            machine.addAPI("print", new OneArgFunction() {
-                @Override
-                public LuaValue call(LuaValue luaValue) {
-                    sender.sendMessage(luaValue.tojstring());
-                    return LuaValue.NIL;
-                }
-            });
+            // PicoTerm
+            machine.getPicoTerm().setOutput(name, sender);
 
             // Pico
             machine.getPico().spawn(location.getWorld(), location, name);
@@ -153,7 +145,7 @@ public final class VisualProgrammingCraft extends JavaPlugin {
             try {
                 machine.loadBios(biosText + "\n" + code);
             } catch (LuaError e) {
-                sender.sendMessage("コードの読み込みに失敗: " + e.getMessage());
+                machine.getPicoTerm().printError(e);
                 return true;
             }
             machine.handleEvent(null, null);

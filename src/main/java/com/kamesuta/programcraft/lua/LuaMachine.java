@@ -10,7 +10,6 @@ import org.luaj.vm2.lib.OneArgFunction;
 import org.luaj.vm2.lib.ZeroArgFunction;
 import org.luaj.vm2.lib.jse.JsePlatform;
 
-import java.util.logging.Level;
 import java.util.stream.Stream;
 
 public class LuaMachine {
@@ -28,6 +27,7 @@ public class LuaMachine {
 
     private LuaTimer m_timer;
     private Pico m_pico;
+    private PicoTerm m_picoTerm;
 
     public LuaMachine() {
         // Create an environment to run in
@@ -105,6 +105,9 @@ public class LuaMachine {
         // Pico
         m_pico = new Pico();
         m_pico.register(this);
+        // PicoTerm
+        m_picoTerm = new PicoTerm();
+        m_picoTerm.register(this);
     }
 
     public void addAPI(String name, LuaValue api) {
@@ -119,6 +122,10 @@ public class LuaMachine {
         return m_pico;
     }
 
+    public PicoTerm getPicoTerm() {
+        return m_picoTerm;
+    }
+
     public void loadBios(String biosText) {
         // Begin executing a file (ie, the bios)
         if (m_mainRoutine != null) {
@@ -131,11 +138,12 @@ public class LuaMachine {
                     LuaValue.valueOf(biosText), LuaValue.valueOf("bios.lua")
             ));
             m_mainRoutine = m_coroutine_create.call(program);
-        } finally {
+        } catch (LuaError e) {
             if (m_mainRoutine != null) {
                 ((LuaThread) m_mainRoutine).abandon();
                 m_mainRoutine = null;
             }
+            throw e;
         }
     }
 
@@ -177,6 +185,7 @@ public class LuaMachine {
                 m_mainRoutine = null;
             }
         } catch (LuaError e) {
+            m_picoTerm.printError(e);
             ((LuaThread) m_mainRoutine).abandon();
             m_mainRoutine = null;
         } finally {
