@@ -1,0 +1,103 @@
+<!doctype html>
+<html lang="ja">
+
+<head>
+    <meta charset="utf-8" />
+    <script src="https://unpkg.com/blockly/blockly_compressed"></script>
+    <script src="https://unpkg.com/blockly/blocks_compressed"></script>
+    <script src="https://unpkg.com/blockly/javascript_compressed"></script>
+    <script src="https://unpkg.com/blockly/lua_compressed"></script>
+    <script src="https://unpkg.com/blockly/msg/ja"></script>
+    <script src="./toolbox.js"></script>
+    <script src="./text.js"></script>
+    <script src="./lua.js"></script>
+    <title>Blockly Sample</title>
+
+    <style>
+        h1 {
+            font-weight: normal;
+            font-size: 140%;
+            margin: 10px;
+        }
+
+        #blocklyDiv {
+            float: bottom;
+            height: 400px;
+            width: 100%;
+        }
+    </style>
+</head>
+
+<body>
+    <div id="blocklyDiv"></div> <!-- ワークスペースを用意 -->
+
+    <script>
+        Blockly.common.defineBlocks(blocks);
+        Object.assign(Blockly.Lua.forBlock, forBlock);
+
+        var workspace = Blockly.inject('blocklyDiv', {
+            toolbox: toolbox,
+            renderer: 'zelos',
+        });
+
+        function run() {
+            Blockly.JavaScript.addReservedWords('code');
+            var code = Blockly.JavaScript.workspaceToCode(workspace);
+            document.getElementById('code').value = code;
+
+            try {
+                eval(code);
+            } catch (e) {
+                alert(e);
+            }
+        }
+
+        function toLua() {
+            Blockly.Lua.addReservedWords('code');
+            var code = Blockly.Lua.workspaceToCode(workspace);
+            document.getElementById('code').value = code;
+        }
+
+        // 非同期でフォーム送信
+        async function submitForm(event) {
+            event.preventDefault(); // フォームのデフォルト送信動作を防ぐ
+
+            toLua(); // Luaコードに変換
+
+            const form = document.getElementById('form');
+            const formData = new FormData(form);
+
+            try {
+                const response = await fetch(form.action, {
+                    headers: {
+                        'Accept': 'application/json',
+                        'Content-Type': 'application/json'
+                    },
+                    method: "POST",
+                    body: JSON.stringify(Object.fromEntries(formData)),
+                });
+
+                if (!response.ok) {
+                    alert('Error submitting form:\n' + response.statusText);
+                }
+            } catch (error) {
+                alert('Error submitting form:\n' + error.message);
+            }
+        }
+    </script>
+
+    <form id="form" action="/execute" method="post" onsubmit="submitForm(event)">
+        <input type="text" name="name" value="a"> <!-- 動かすPicoの名前 -->
+        <textarea id="code" name="code" style="width: 600px; height: 200px;"></textarea> <!-- 生成コードを表示するテキストエリア -->
+        <!-- <button onclick="run()">RunJS</button> 実行ボタン -->
+        <!-- <button onclick="toLua()">toLua</button> Luaコードに変換するボタン -->
+        <button type="submit">Execute</button> <!-- 生成コードを保存するボタン -->
+    </form>
+
+    <!-- <div id="output"></div> 実行結果を表示するエリア -->
+    <!-- <textarea id="xml" style="width: 600px; height: 200px;"></textarea> ブロックの状態を保存するためのテキストエリア -->
+    <!-- <button onclick="document.getElementById('xml').value = Blockly.Xml.domToPrettyText(Blockly.Xml.workspaceToDom(workspace));">Save</button> ブロックの状態を保存するボタン -->
+    <!-- <button onclick="Blockly.Xml.domToWorkspace(Blockly.utils.xml.textToDom(document.getElementById('xml').value), workspace);">Load</button> ブロックの状態を読み込むボタン -->
+</body>
+
+</html>

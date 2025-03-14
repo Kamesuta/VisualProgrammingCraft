@@ -27,6 +27,7 @@ public final class VisualProgrammingCraft extends JavaPlugin {
 
     public String biosText;
     private final Map<String, LuaMachine> luaMachines = new HashMap<>();
+    private WebServer webServer;
 
     @Override
     public void onEnable() {
@@ -50,11 +51,24 @@ public final class VisualProgrammingCraft extends JavaPlugin {
                 machine.getPico().update();
             }
         }, 0, 1);
+
+        // Start the web server
+        webServer = new WebServer(this::loadTextResource, this::executeScript);
+        try {
+            webServer.start();
+        } catch (IOException e) {
+            logger.severe("Webサーバーの起動に失敗: " + e.getMessage());
+            getServer().getPluginManager().disablePlugin(this);
+            return;
+        }
     }
 
     @Override
     public void onDisable() {
         // Plugin shutdown logic
+        if (webServer != null) {
+            webServer.stop();
+        }
     }
 
     @Override
@@ -173,7 +187,7 @@ public final class VisualProgrammingCraft extends JavaPlugin {
         return null;
     }
 
-    private String loadTextResource(String filename) throws IOException {
+    public String loadTextResource(String filename) throws IOException {
         // Load the bios
         try (Reader reader = getTextResource(filename)) {
             if (reader == null) {
@@ -185,5 +199,25 @@ public final class VisualProgrammingCraft extends JavaPlugin {
         } catch (IOException e) {
             throw new IOException("ファイルの読み込みに失敗: " + filename, e);
         }
+    }
+
+    public void executeScript(String machineName, String script) {
+        LuaMachine machine = luaMachines.get(machineName);
+        if (machine == null) {
+            //sender.sendMessage("Picoは存在しません: " + name);
+            return;
+        }
+        if (!machine.isFinished()) {
+            //sender.sendMessage("Picoは既に実行中です: " + name);
+            return;
+        }
+
+        try {
+            machine.loadBios(biosText + "\n" + script);
+        } catch (LuaError e) {
+            machine.getPicoTerm().printError(e);
+            return;
+        }
+        machine.handleEvent(null, null);
     }
 }
